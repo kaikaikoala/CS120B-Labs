@@ -1,10 +1,11 @@
-/*
- * pkawa001_lab1_part1.c
- *
- * Created: 7/30/2018 2:28:49 PM
- * Author : ucrcse
- */ 
-
+/*	Partner(s) Name & E-mail: Philip Kaishin Kawada pkawa001@ucr.edu
+ *	Lab Section: 21
+ *	Assignment: Lab # 1 Exercise # 1
+ *	Exercise Description:
+ *	
+ *	I acknowledge all content contained herein, excluding template or example
+ *	code, is my own original work.
+ */
 #include <avr/io.h>
 
 

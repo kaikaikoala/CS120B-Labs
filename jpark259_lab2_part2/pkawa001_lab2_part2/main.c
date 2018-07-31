@@ -1,9 +1,11 @@
-/*
- * pkawa001_lab2_part2.c
- *
- * Created: 7/31/2018 1:15:15 PM
- * Author : ucrcse
- */ 
+/*	Partner(s) Name & E-mail: Philip Kaishin Kawada pkawa001@ucr.edu
+ *	Lab Section: 21
+ *	Assignment: Lab # 2 Exercise # 2
+ *	Exercise Description:
+ *	
+ *	I acknowledge all content contained herein, excluding template or example
+ *	code, is my own original work.
+ */
 
 #include <avr/io.h>
 
@@ -20,40 +22,31 @@ int main(void)
 	DDRC = 0xFF; PORTC = 0x00;
     
 	unsigned char level = 0x00;
-	unsigned char fuel = 0x00;
-	unsigned char condition = 0x00;
     while (1) 
     {
-		fuel = PINA & 0x0F;
-		condition = (PINA & 0xF0)>>4;
-		if(fuel > 13){
+		level = PINB;
+		if(PINA > 13){
 			level = SetBit(level,0,1);
 		}
-		if(fuel > 10){
+		if(PINA > 10){
 			level = SetBit(level,1,1);	
 		}
-		if(fuel > 7){
+		if(PINA > 7){
 			level =SetBit(level,2,1);
 		}
-		if(fuel > 5){
+		if(PINA > 5){
 			level = SetBit(level,3,1);
 		}
-		if(fuel > 3){
+		if(PINA > 3){
 			level = SetBit(level,4,1);
 		}
-		if(fuel > 1){
+		if(PINA > 1){
 			level =SetBit(level,5,1);
 		}
-		if(fuel < 5){
+		if(PINA < 5){
 			level = SetBit(level,6,1);
-		} else {
-			level = SetBit(level,6,0);
-		}
-		if(GetBit(condition,0) == 1 && GetBit(condition,1) == 1  && GetBit(condition,2) == 0){
-			level = SetBit(level,7,1);
-		} else {
-			level = SetBit(level,7,0);
 		}
 		PORTC = level;
     }
 }
+

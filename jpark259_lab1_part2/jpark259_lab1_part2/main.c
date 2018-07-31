@@ -1,9 +1,12 @@
-/*
- * pkawa001_lab1_part3.c
- *
- * Created: 7/30/2018 3:39:01 PM
- * Author : ucrcse
- */ 
+/*	Partner(s) Name & E-mail: Philip Kaishin Kawada pkawa001@ucr.edu
+ *	Lab Section: 21
+ *	Assignment: Lab # 1 Exercise # 2
+ *	Exercise Description:
+ *	
+ *	I acknowledge all content contained herein, excluding template or example
+ *	code, is my own original work.
+ */
+
 #include <avr/io.h>
 
 
@@ -17,7 +20,6 @@ int main(void)
 	unsigned char spot3 = 0x00;
 	unsigned char spot4 = 0x00;
 	unsigned char cntavail = 0x04;
-	unsigned char full = 0x80;
     while (1) 
     {
 		spot1 = PINA & 0x01;	//Port A's pins 3 to 0
@@ -37,12 +39,7 @@ int main(void)
 		if ( spot4 == 0x08){
 			cntavail -= 0x01;
 		}
-		if(cntavail == 0x00){
-			PORTB = full;
-		} else {
-			PORTB = cntavail;	
-		}
-	}
-	return 0;
+		PORTB = cntavail;
+    }
 }
 
