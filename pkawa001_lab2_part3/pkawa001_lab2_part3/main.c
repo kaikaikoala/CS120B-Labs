@@ -21,12 +21,11 @@ int main(void)
     
 	unsigned char level = 0x00;
 	unsigned char fuel = 0x00;
-	unsigned char saftey_light = 0x00;
-	unsigned char
+	unsigned char condition = 0x00;
     while (1) 
     {
-		level = PINB;
 		fuel = PINA & 0x0F;
+		condition = (PINA & 0xF0)>>4;
 		if(fuel > 13){
 			level = SetBit(level,0,1);
 		}
@@ -47,9 +46,14 @@ int main(void)
 		}
 		if(fuel < 5){
 			level = SetBit(level,6,1);
+		} else {
+			level = SetBit(level,6,0);
 		}
-		if()
-		level = level | 
+		if(GetBit(condition,0) == 1 && GetBit(condition,1) == 1  && GetBit(condition,2) == 0){
+			level = SetBit(level,7,1);
+		} else {
+			level = SetBit(level,7,0);
+		}
 		PORTC = level;
     }
 }
