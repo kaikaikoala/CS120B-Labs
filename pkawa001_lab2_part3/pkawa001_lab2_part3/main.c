@@ -1,7 +1,7 @@
 /*
- * pkawa001_lab2_part3.c
+ * pkawa001_lab2_part2.c
  *
- * Created: 7/31/2018 1:51:33 PM
+ * Created: 7/31/2018 1:15:15 PM
  * Author : ucrcse
  */ 
 
@@ -16,14 +16,40 @@ unsigned char GetBit(unsigned char x, unsigned char k) {
 
 int main(void)
 {
-	DDRA = 0x00; PORTA = 0xFF; // Configure port A's 8 pins as inputs
-	DDRB = 0xFF; PORTB = 0x00; // Configure port B's 8 pins as outputs,
-	// initialize to 0s
-	unsigned char tmpB = 0x00; // intermediate variable used for port updates
-	unsigned char button = 0x00;
-    /* Replace with your application code */
+	DDRA = 0x00; PORTA = 0xFF;
+	DDRC = 0xFF; PORTC = 0x00;
+    
+	unsigned char level = 0x00;
+	unsigned char fuel = 0x00;
+	unsigned char saftey_light = 0x00;
+	unsigned char
     while (1) 
     {
+		level = PINB;
+		fuel = PINA & 0x0F;
+		if(fuel > 13){
+			level = SetBit(level,0,1);
+		}
+		if(fuel > 10){
+			level = SetBit(level,1,1);	
+		}
+		if(fuel > 7){
+			level =SetBit(level,2,1);
+		}
+		if(fuel > 5){
+			level = SetBit(level,3,1);
+		}
+		if(fuel > 3){
+			level = SetBit(level,4,1);
+		}
+		if(fuel > 1){
+			level =SetBit(level,5,1);
+		}
+		if(fuel < 5){
+			level = SetBit(level,6,1);
+		}
+		if()
+		level = level | 
+		PORTC = level;
     }
 }
-
