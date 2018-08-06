@@ -8,7 +8,7 @@
  */ 
 
 #include <avr/io.h>
-enum States {init,base,up,down,max,min} myState;
+enum States {init,base,up,down,max,min,zero} myState;
 
 unsigned char PA , cnt=7 ;
 	
@@ -25,7 +25,10 @@ void counter(){
 			else if( cnt ==0 || PA==0x03 ){
 				myState = min ;	
 			}
-			
+			else if (PA == 0x03){
+				cnt = 0;
+				myState = zero;
+			}
 			else if( PA == 0x01 ){
 				myState = up;
 			}
@@ -79,6 +82,14 @@ void counter(){
 				myState=min;
 			}
 			break;
+		case(zero):
+			cnt = 0;
+			if(PA==0x01){
+				myState=up;
+			}else{
+				myState=min;
+			}
+			break;
 	}
 	//action
 	switch(myState){
@@ -93,13 +104,13 @@ void counter(){
 int main(void)
 {
 	DDRA = 0x00; PORTA = 0xFF;
-	DDRC = 0xFF; PORTC = 0x00;
+	DDRB = 0xFF; PORTB = 0x00;
 	myState=init;
     /* Replace with your application code */
     while (1) 
     {
-		PA = PINA & 0x03;
+		PA = ~PINA & 0x03;
 		counter();
-		PORTC = cnt ;
+		PORTB = cnt ;
     }
 }
