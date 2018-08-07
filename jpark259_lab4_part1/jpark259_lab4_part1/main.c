@@ -20,33 +20,34 @@ unsigned char GetBit(unsigned char x, unsigned char k) {
 int main(void)
 {
 	DDRA = 0x00; PORTA = 0xFF;
-	DDRC = 0xFF; PORTC = 0x00;
-    
+	DDRB = 0xFF; PORTB = 0x00;
 	unsigned char level = 0x00;
+	unsigned char fuel = 0x00;
     while (1) 
     {
-		level = PINB;
-		if(PINA > 13){
+		fuel = ~PINA;
+		level = 0x00;
+		if(fuel > 13){
 			level = SetBit(level,0,1);
 		}
-		if(PINA > 10){
+		if(fuel > 10){
 			level = SetBit(level,1,1);	
 		}
-		if(PINA > 7){
+		if(fuel > 7){
 			level =SetBit(level,2,1);
 		}
-		if(PINA > 5){
+		if(fuel > 5){
 			level = SetBit(level,3,1);
 		}
-		if(PINA > 3){
+		if(fuel > 3){
 			level = SetBit(level,4,1);
 		}
-		if(PINA > 1){
+		if(fuel > 1){
 			level =SetBit(level,5,1);
 		}
-		if(PINA < 5){
+		if(fuel < 5){
 			level = SetBit(level,6,1);
 		}
-		PORTC = level;
+		PORTB = level;
     }
 }
