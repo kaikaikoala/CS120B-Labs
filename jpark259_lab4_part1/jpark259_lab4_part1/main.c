@@ -27,22 +27,22 @@ int main(void)
     {
 		fuel = ~PINA;
 		level = 0x00;
-		if(fuel > 13){
+		if(fuel >= 13){
 			level = SetBit(level,0,1);
 		}
-		if(fuel > 10){
+		if(fuel >= 10){
 			level = SetBit(level,1,1);	
 		}
-		if(fuel > 7){
+		if(fuel >= 7){
 			level =SetBit(level,2,1);
 		}
-		if(fuel > 5){
+		if(fuel >= 5){
 			level = SetBit(level,3,1);
 		}
-		if(fuel > 3){
+		if(fuel >= 3){
 			level = SetBit(level,4,1);
 		}
-		if(fuel > 1){
+		if(fuel >= 1){
 			level =SetBit(level,5,1);
 		}
 		if(fuel < 5){
