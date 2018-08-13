@@ -10,9 +10,9 @@
 #include <avr/interrupt.h>
 
 unsigned char button = 0x00;
-enum States {init, wait, increment, decrement, autoincrement, autodecrement} mystate;
+enum States {init, wait, increment, decrement, autoincrement, autodecrement, max, min} mystate;
 unsigned char cnt = 0;
-const unsigned char sec1 = 5;
+const unsigned char sec1 = 10;
 unsigned char output = 0;
 
 // Internal variables for mapping AVR's ISR to our cleaner TimerISR model.
@@ -77,12 +77,12 @@ void tick(){
 			mystate = wait;
 			break;
 		case wait:
-			if(button == 0x00){
+			if(button == 0x00 ){
 				mystate = wait;
-			} else if (button == 0x01){
+			} else if (button == 0x01 && (output != 9)){
 				output++;
 				mystate = increment;
-			} else if (button == 0x02){
+			} else if (button == 0x02 && (output != 0)){
 				output--;
 				mystate = decrement;
 			} else if (button == 0x03) {
@@ -96,6 +96,9 @@ void tick(){
 				mystate = autoincrement;
 				cnt = 0;
 				output++;
+				if(output > 9){
+					mystate = max;
+				}
 			} else if (button == 0x00){
 				mystate = wait;
 			} else if (button == 0x03){
@@ -109,6 +112,9 @@ void tick(){
 				mystate = autodecrement;
 				cnt = 0;
 				output--;
+				if(output < 0){
+					mystate = min;
+				}
 			} else if (button == 0x00){
 				mystate = wait;
 			} else if (button == 0x03){
@@ -116,22 +122,46 @@ void tick(){
 			}
 			break;
 		case autoincrement:
-			if(button == 0x01){
+			if(button == 0x01 && (output != 9)){
 				mystate = autoincrement;
 			} else if(button == 0x00){
 				mystate = wait;
 				cnt = 0;
 			} else if (button == 0x03){
 				mystate = init;
+			} else if (output == 9){
+				mystate = max;
+			} else if (output == 0){
+				mystate = min;
 			}
 			break;
 		case autodecrement:
-			if(button == 0x02){
+			if(button == 0x02 && (output != 0)){
 				mystate = autodecrement;
 			} else if(button == 0x00){
 				mystate = wait;
 				cnt = 0;
 			} else if (button == 0x03){
+				mystate = init;
+			} else if (output == 9){
+				mystate = max;
+			} else if (output == 0){
+				mystate = min;
+			}
+			break;
+		case max:
+			if (button == 0x02){
+				mystate = decrement;
+			} else if (button == 0x04){
+				mystate = init;
+			} else if (button == 0x01){
+				mystate = max;
+			}
+			break;
+		case min:
+			if(button == 0x01){
+				mystate = increment;
+			} else if (button == 0x04){
 				mystate = init;
 			}
 			break;
@@ -149,15 +179,19 @@ void tick(){
 			break;
 		case autoincrement:
 			cnt++;
-			if(cnt%sec1 == 0){
+			if(cnt%sec1 == 0 && output <= 9){
 				output++;
 			}
 			break;
 		case autodecrement:
 			cnt++;
-			if(cnt%sec1 == 0){
+			if(cnt%sec1 == 0 && output >= 0){
 				output--;
 			}
+			break;
+		case max:
+			break;
+		case min:
 			break;
 		default:
 		break;
@@ -169,7 +203,7 @@ int main(void)
    DDRA = 0x00; PORTA = 0xFF;
    DDRC = 0xFF; PORTC = 0x00; // LCD data lines
    DDRD = 0xFF; PORTD = 0x00; // LCD control lines
-   TimerSet(200);
+   TimerSet(100);
    TimerOn();
    
    // Initializes the LCD display
@@ -182,6 +216,7 @@ int main(void)
 	   button = ~PINA & 0x03;
 	   tick();
 	   LCD_ClearScreen();
+	   LCD_Cursor(1);
 	   LCD_WriteData(output+'0');
 	   while(!TimerFlag);
 	   TimerFlag = 0;
