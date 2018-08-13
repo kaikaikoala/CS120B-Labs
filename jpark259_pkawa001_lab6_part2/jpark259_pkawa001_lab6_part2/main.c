@@ -7,7 +7,7 @@ enum states{ led0,led1, led2, press,release,victory,restart} myState ;
 unsigned char cnt = 0 ;
 unsigned char b = 0x00;
 unsigned char button = 0x00;
-unsigned char score = 5 ;
+char score = 5 ;
 
 // Internal variables for mapping AVR's ISR to our cleaner TimerISR model.
 unsigned long _avr_timer_M = 1; // Start count from here, down to 0. Default 1 ms.
@@ -159,7 +159,7 @@ int main()
 	PORTA = 0xFF;
 	DDRC = 0xFF ; PORTC=0x00;
 	DDRD = 0xFF ; PORTD =0x00;
-	TimerSet(300);
+	TimerSet(100);
 	TimerOn();
 	LCD_init();
 	
@@ -176,7 +176,7 @@ int main()
 		if( score < 10 ){
 			LCD_WriteData( score + '0' );
 		}
-		else{
+		else if( score == 10 ){
 			LCD_DisplayString(1,"Victory");
 		}
 	}
