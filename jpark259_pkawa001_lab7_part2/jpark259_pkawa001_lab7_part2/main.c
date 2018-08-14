@@ -6,6 +6,13 @@
 unsigned long _avr_timer_M = 1; // Start count from here, down to 0. Default 1 ms.
 unsigned long _avr_timer_cntcurr = 0; // Current internal count of 1ms ticks
 
+enum ThreeStates {led1,led2,led3} threestate;
+enum BlinkStates {led01,led04} blinkstate;
+
+unsigned char cnt = 0;
+unsigned char threeled = 0x00;
+unsigned char blinkled = 0x00;
+unsigned char combinedled = 0x00;
 
 void TimerOn() {
 	// AVR timer/counter controller register TCCR1
@@ -37,6 +44,16 @@ void TimerOff() {
 	TCCR1B = 0x00; // bit3bit1bit0=000: timer off
 }
 
+typedef struct {
+	int state;				// Task’s current state
+	unsigned long period;			// Task period
+	unsigned long elapsedTime;		// Time elapsed since last task tick
+	int (*TickFct)(int);			// Task tick function
+}Task;
+
+const unsigned char tasksSize = 3;
+Task tasks[3];
+
 void TimerISR() {
 	unsigned char i;
 	for (i = 0;i < tasksSize;++i) {
@@ -44,8 +61,9 @@ void TimerISR() {
 			tasks[i].state = tasks[i].TickFct(tasks[i].state);
 			tasks[i].elapsedTime = 0;
 		}
-		tasks[i].elapsedTime += tasksPeriod;
+		tasks[i].elapsedTime += 1;
 	}
+	PORTB = combinedled;
 }
 
 // In our approach, the C programmer does not touch this ISR, but rather TimerISR()
@@ -64,58 +82,66 @@ void TimerSet(unsigned long M) {
 	_avr_timer_cntcurr = _avr_timer_M;
 }
 
-enum ThreeStates {led1,led2,led3} threestate;
-enum BlinkStates {led01,led04} blinkstate;
 
-unsigned char cnt = 0;
-unsigned char threeled = 0x00;
-unsigned char blinkled = 0x00;
-unsigned char combinedled = 0x00;
-void ThreeLED(){
-	switch(threestate){
+int ThreeLED(int state){
+	switch(state){
 		case led1:
 		threeled = 0x01;
-		threestate = led2;
+		state = led2;
 		break;
 		case led2:
 		threeled = 0x02;
-		threestate = led3;
+		state = led3;
 		break;
 		case led3:
 		threeled = 0x04;
-		threestate = led1;
+		state = led1;
 		break;
 	}
+	return state;
 }
 
-void BlinkingLED(){
-	switch(blinkstate){
+int BlinkingLED(int state){
+	switch(state){
 		case led04:
 		blinkled = 0x08;
-		blinkstate = led01;
+		state = led01;
 		break;
 		case led01:
 		blinkled = 0x00;
-		blinkstate = led04;
+		state = led04;
 		break;
 	}
+	return state;
 }
 
-void CombinedLED(){
+int CombinedLED(int state){
 	combinedled = blinkled | threeled;
+	return state;
 }
 int main(void)
 {
 	DDRB = 0xFF; PORTB = 0x00;
 	/* Replace with your application code */
-	TimerSet(1000);
+	unsigned char i = 0;
+	tasks[i].state = led1;
+	tasks[i].period = 1000;
+	tasks[i].elapsedTime = 0;
+	tasks[i].TickFct = &ThreeLED;
+	i++;
+	tasks[i].state = led04;
+	tasks[i].period = 1000;
+	tasks[i].elapsedTime = 0;
+	tasks[i].TickFct = &BlinkingLED;
+	i++;
+	tasks[i].state = 0;
+	tasks[i].period = 1000;
+	tasks[i].elapsedTime = 0;
+	tasks[i].TickFct = &CombinedLED;
+	TimerSet(1);
 	TimerOn();
 	while (1)
 	{
-		ThreeLED();
-		BlinkingLED();
-		CombinedLED();
-		while(1){};
-		PORTB = combinedled;
+
 	}
 }
