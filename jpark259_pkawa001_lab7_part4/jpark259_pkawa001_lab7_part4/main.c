@@ -155,10 +155,13 @@ int Sound(int state){
 				if(tasks[3].period!=255){	
 					tasks[3].period+=1;
 				}
-			}
+			} 
 			break;
 	}
 	switch(state){
+		case wait:
+			B4 = 0x00;
+			break;
 		default:
 			cnt++;
 			B4=cnt%2?0x00:0x10;
