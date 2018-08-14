@@ -8,11 +8,15 @@ unsigned long _avr_timer_cntcurr = 0; // Current internal count of 1ms ticks
 
 enum ThreeStates {led1,led2,led3} threestate;
 enum BlinkStates {led01,led04} blinkstate;
+enum SoundStates {up,down,wait} soundstate;
 
 unsigned char cnt = 0;
 unsigned char threeled = 0x00;
 unsigned char blinkled = 0x00;
 unsigned char combinedled = 0x00;
+unsigned char A = 0x00;
+unsigned char B4 = 0x00;
+unsigned char tune = 1;
 
 void TimerOn() {
 	// AVR timer/counter controller register TCCR1
@@ -51,11 +55,12 @@ typedef struct {
 	int (*TickFct)(int);			// Task tick function
 }Task;
 
-const unsigned char tasksSize = 3;
-Task tasks[3];
+const unsigned char tasksSize = 4;
+Task tasks[4];
 
 void TimerISR() {
 	unsigned char i;
+	A = ~PINA;
 	for (i = 0;i < tasksSize;++i) {
 		if (tasks[i].elapsedTime >= tasks[i].period) {
 			tasks[i].state = tasks[i].TickFct(tasks[i].state);
@@ -116,16 +121,60 @@ int BlinkingLED(int state){
 }
 
 int CombinedLED(int state){
-	combinedled = blinkled | threeled;
+	combinedled = blinkled | threeled | B4;
+	return state;
+}
+
+int Sound(int state){
+	switch(state){
+		case up:
+			if(A==0x01){
+				state = up;
+			}
+			else if(A==0x00){
+				state = wait;
+			}
+			break;
+		case down:
+			if( A==0x02){
+				state=down;
+			}
+			else if(A==0x00){
+				state = wait;
+			}
+			break;
+		case wait:
+			if(A==0x02){
+				state = down;
+				if(tasks[3].period!=0){
+					tasks[3].period--;
+				}
+			}
+			else if(A==0x01){
+				state=up;
+				if(tasks[3].period!=255){	
+					tasks[3].period+=1;
+				}
+			}
+			break;
+	}
+	switch(state){
+		default:
+			cnt++;
+			B4=cnt%2?0x00:0x10;
+			break;	
+	}
 	return state;
 }
 int main(void)
 {
+	DDRA = 0x00; PORTA = 0xFF;
 	DDRB = 0xFF; PORTB = 0x00;
 	/* Replace with your application code */
 	unsigned char i = 0;
+
 	tasks[i].state = led1;
-	tasks[i].period = 1000;
+	tasks[i].period = 300;
 	tasks[i].elapsedTime = 0;
 	tasks[i].TickFct = &ThreeLED;
 	i++;
@@ -135,13 +184,15 @@ int main(void)
 	tasks[i].TickFct = &BlinkingLED;
 	i++;
 	tasks[i].state = 0;
-	tasks[i].period = 0;
+	tasks[i].period = tune;
 	tasks[i].elapsedTime = 0;
 	tasks[i].TickFct = &CombinedLED;
+	i++;
+	tasks[i].state = wait;
+	tasks[i].period = tune;
+	tasks[i].elapsedTime = 0;
+	tasks[i].TickFct = &Sound;
 	TimerSet(1);
 	TimerOn();
-	while (1)
-	{
-
-	}
+	while (1){}
 }
