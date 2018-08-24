@@ -1,259 +1,50 @@
-/*
- * Jpark259_Custom_Project.c
- *
- * Created: 8/23/2018 1:05:30 PM
- * Author : ucrcse
- */ 
-
 #include <avr/io.h>
+#include <bit.h>
+#include <timer.h>
+#include <avr/interrupt.h>
+#include <stdio.h>
 #include "io.c"
-//#include "timer.h"
-#include "bit.h"
-enum States {init,moves} mystates;
-unsigned char A = 0x00;
+#include <string.h>
 
-volatile unsigned char TimerFlag = 0; // TimerISR() sets this to 1. C programmer should clear to 0.
-unsigned long _avr_timer_M = 1; // Start count from here, down to 0. Default 1 ms.
-unsigned long _avr_timer_cntcurr = 0; // Current internal count of 1ms ticks
+unsigned short numTasks = 2;
 
-void TimerOn() {
-	// AVR timer/counter controller register TCCR1
-	TCCR1B = 0x0B;// bit3 = 0: CTC mode (clear timer on compare)
-	// bit2bit1bit0=011: pre-scaler /64
-	// 00001011: 0x0B
-	// SO, 8 MHz clock or 8,000,000 /64 = 125,000 ticks/s
-	// Thus, TCNT1 register will count at 125,000 ticks/s
-
-	// AVR output compare register OCR1A.
-	OCR1A = 125;	// Timer interrupt will be generated when TCNT1==OCR1A
-	// We want a 1 ms tick. 0.001 s * 125,000 ticks/s = 125
-	// So when TCNT1 register equals 125,
-	// 1 ms has passed. Thus, we compare to 125.
-	// AVR timer interrupt mask register
-	TIMSK1 = 0x02; // bit1: OCIE1A -- enables compare match interrupt
-
-	//Initialize avr counter
-	TCNT1=0;
-
-	_avr_timer_cntcurr = _avr_timer_M;
-	// TimerISR will be called every _avr_timer_cntcurr milliseconds
-
-	//Enable global interrupts
-	SREG |= 0x80; // 0x80: 1000000
-}
-
-void TimerOff() {
-	TCCR1B = 0x00; // bit3bit1bit0=000: timer off
-}
-
-void TimerISR() {
-	TimerFlag = 1;
-}
-
-// In our approach, the C programmer does not touch this ISR, but rather TimerISR()
-ISR(TIMER1_COMPA_vect) {
-	// CPU automatically calls when TCNT1 == OCR1 (every 1 ms per TimerOn settings)
-	_avr_timer_cntcurr--; // Count down to 0 rather than up to TOP
-	if (_avr_timer_cntcurr == 0) { // results in a more efficient compare
-		TimerISR(); // Call the ISR that the user uses
-		_avr_timer_cntcurr = _avr_timer_M;
-	}
-}
-
-// Set TimerISR() to tick every M ms
-void TimerSet(unsigned long M) {
-	_avr_timer_M = M;
-	_avr_timer_cntcurr = _avr_timer_M;
-}
-
-
-void move(){
-	switch(mystates){
-		case init:
-			break;
-		case moves:
-			mystates = moves;
-			break;
-	}
-	switch(mystates){
-		case moves:
-			break;
-	}
-}
-
-int main(void)
+unsigned long int findGCD(unsigned long int a, unsigned long int b)
 {
-	
-	DDRA = 0xFF; PORTA = 0x00; // LCD data lines
-	DDRD = 0xFF; PORTD = 0x00; // LCD control lines
-    //Replace with your application code 
-	
-	LCD_init();
-	LCD_build();
-	mystates = init;
-	TimerSet(10);
-	TimerOn();
-    while (1) 
-    {
-		A = ~PINA;
-		move();
-		while (!TimerFlag);	// Wait 1 sec
-		TimerFlag = 0;
-    }
+	unsigned long int c;
+	while(1){
+		c = a%b;
+		if(c==0){return b;}
+		a = b;
+		b = c;
+	}
+	return 0;
 }
 
-/*
-unsigned char GetKeypadKey();
-unsigned long int findGCD( unsigned long int, unsigned long int);
-
-// Struct for Tasks represent a running process in our simple real-time operating system.
 typedef struct _task {
+	/*Tasks should have members that include: state, period,
+		a measurement of elapsed time, and a function pointer.*/
 	signed char state; //Task's current state
 	unsigned long int period; //Task period
 	unsigned long int elapsedTime; //Time elapsed since last task tick
 	int (*TickFct)(int); //Task tick function
 } task;
 
-//--------End Task scheduler data structure-----------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-//Tasks
-//////////////////////////////////////////////////////////////////////////
-enum SM_keypad_states{ SM_keypad_init };
-int SM_keypad_tick( int );
-
-enum SM_LCD_states{ SM_LCD_init };
-int SM_LCD_tick( int );
-
-enum SM_controller_states{ SM_controller_init };
-int SM_controller_tick( int );
-
-//global variables
-unsigned char keypad_output = 0x00;
-unsigned char LCD_input = 0x00;
-
-int main(void)
-{
-	//Ports to be used
-	DDRA = 0xFF; PORTA = 0x00; // LCD data lines
-	DDRB = 0xFF; PORTB = 0x00; // PORTB set to output, outputs init 0s
-	DDRC = 0xF0; PORTC = 0x0F; // PC7..4 outputs init 0s, PC3..0 inputs init 1s
-	DDRD = 0xFF; PORTD = 0x00;
-
-	//Periods
-	unsigned long int SM_keypad_period = 100;
-	unsigned long int SM_LCD_period = 100;
-	unsigned long int SM_controller_period = 100;
-
-	//GCD
-	unsigned long int gcd;
-	gcd = findGCD( SM_keypad_period , SM_LCD_period );
-	gcd = findGCD( gcd , SM_controller_period );
-
-	//task array
-	static task SM_keypad_task , SM_LCD_task , SM_controller_task ;
-	task *tasks[] = { &SM_keypad_task , &SM_controller_task , &SM_LCD_task };
-	const unsigned short numTasks = sizeof(tasks)/sizeof(task*);
-
-	//SM_keypad_task
-	SM_keypad_task.state = -1;
-	SM_keypad_task.period = SM_keypad_period/gcd ;
-	SM_keypad_task.elapsedTime = SM_keypad_period/gcd ;
-	SM_keypad_task.TickFct = &SM_keypad_tick ;
-	//SM_LCD_task
-	SM_LCD_task.state = -1 ;
-	SM_LCD_task.period = SM_LCD_period/gcd;
-	SM_LCD_task.elapsedTime = SM_LCD_period/gcd;
-	SM_LCD_task.TickFct = &SM_LCD_tick;
-	//SM_controller_task
-	SM_controller_task.state = -1;
-	SM_controller_task.period = SM_controller_period/gcd;
-	SM_controller_task.elapsedTime = SM_controller_period/gcd;
-	SM_controller_task.TickFct = &SM_controller_tick;
-
-	//timer intialization
-	TimerSet(gcd);
-	TimerOn(0);
-
-	//Tasks execution while loop
-	unsigned char i = 0 ;
-	LCD_init();
 
 
-	while(1) {
-
-		for( i=0 ; i<numTasks ; ++i ){
-			if( tasks[i]->elapsedTime == tasks[i]->period ){
-				tasks[i]->state = tasks[i]->TickFct(tasks[i]->state);
-				tasks[i]->elapsedTime = 0 ;
-			}
-			tasks[i]->elapsedTime+= 1 ;
-		}
-
-		while(!TimerFlag);
-		TimerFlag=0;
-	}
-
-
-}
-
-
-int SM_keypad_tick(int state){
-	//only one state in keypad state machine
-	switch(state){
-		case SM_keypad_init: break;
-		default:
-		state = SM_keypad_init;
-		break;
-	}
-	switch(state){
-		case SM_keypad_init:
-		keypad_output = GetKeypadKey();
-		break;
-		default:
-		break;
-	}
-	return state ;
-}
-
-int SM_controller_tick(int state){
-	switch(state){
-		case SM_controller_init:
-		break;
-		default:
-		state = SM_controller_init;
-	}
-	switch(state){
-		case SM_controller_init:
-		if( keypad_output != '\0'){
-			LCD_input = keypad_output;
-		}
-		//else{} do nothing
-		break;
-		default:
-		break;
-	}
-}
-
-int SM_LCD_tick( int state){
-	switch( state ){
-		case SM_LCD_init:
-		break;
-		default:
-		state = SM_LCD_init ;
-	}
-	switch(state){
-		case SM_LCD_init:
-		LCD_ClearScreen();
-		LCD_Cursor(0);
-		LCD_WriteData(LCD_input);
-		default:
-		break;
-	}
-}
-
-//--------GetKeypadKey() function----------------------------------
+// Returns '\0' if no key pressed, else returns char '1', '2', ... '9', 'A', ...
+// If multiple keys pressed, returns leftmost-topmost one
+// Keypad must be connected to port C
+/* Keypad arrangement
+        PC4 PC5 PC6 PC7
+   col  1   2   3   4
+row
+PC0 1   1 | 2 | 3 | A
+PC1 2   4 | 5 | 6 | B
+PC2 3   7 | 8 | 9 | C
+PC3 4   * | 0 | # | D
+*/
 unsigned char GetKeypadKey() {
+
 	PORTC = 0xEF; // Enable col 4 with 0, disable others with 1’s
 	asm("nop"); // add a delay to allow PORTC to stabilize before checking
 	if (GetBit(PINC,0)==0) { return('1'); }
@@ -278,10 +69,10 @@ unsigned char GetKeypadKey() {
 	if (GetBit(PINC,1)==0) { return('6'); }
 	if (GetBit(PINC,2)==0) { return('9'); }
 	if (GetBit(PINC,3)==0) { return('#'); }
-	// Check keys in col 4
-	PORTC = 0x7F; // Enable col 6 with 0, disable others with 1’s
-	asm("nop"); // add a delay to allow PORTC to stabilize before checking
-	// ... *****FINISH*****
+	// Check keys in col 4	
+	PORTC = 0x7F;
+	asm("nop");
+	
 	if (GetBit(PINC,0)==0) { return('A'); }
 	if (GetBit(PINC,1)==0) { return('B'); }
 	if (GetBit(PINC,2)==0) { return('C'); }
@@ -292,16 +83,125 @@ unsigned char GetKeypadKey() {
 
 }
 
-//--------Find GCD function --------------------------------------------------
-unsigned long int findGCD(unsigned long int a, unsigned long int b){
-	unsigned long int c;
-	while(1){
-		c = a%b;
-		if(c==0){return b;}
-		a = b;
-		b = c;
+char* from_key = " ";
+
+enum keypad_states {getkey} keypad_state = -1; 
+
+unsigned char x;
+
+unsigned char in;
+
+int keypad_tick (int state) {
+	switch(state) {
+		case getkey:
+			break;
+		default:
+			state = getkey;
+			break;
 	}
-	return 0;
+	
+	switch(state) {
+		case getkey:
+			x = GetKeypadKey();
+			switch (x) {
+				case '\0': break; // All 5 LEDs on
+				case '1':
+					in++;
+					break;
+	/*			case '1': from_key[0] = '1'; break; // hex equivalent
+				case '2': from_key[0] = '2'; break;
+				case '3': from_key[0] = '3'; break;
+				case '4': from_key[0] = '4'; break;
+				case '5': from_key[0] = '5'; break;
+				case '6': from_key[0] = '6'; break;
+				case '7': from_key[0] = '7'; break;
+				case '8': from_key[0] = '8'; break;
+				case '9': from_key[0] = '9'; break;
+				// . . . ***** FINISH *****
+				case 'A': from_key[0] = 'A'; break;
+				case 'B': from_key[0] = 'B'; break;
+				case 'C': from_key[0] = 'C'; break;
+				case 'D': from_key[0] = 'D'; break;
+				case '*': from_key[0] = '*'; break;
+				case '0': from_key[0] = '0'; break;
+				case '#': from_key[0] = '#'; break;*/
+				default: 
+					LCD_Cursor(in + 1);
+					LCD_WriteData(x); 
+					in = (in + 1) % 16;
+					break; // Should never occur. Middle LED off.
+			}
+			break;
+	}
+	
+	return state;
 }
-//--------End find GCD function ----------------------------------------------
-*/
+
+unsigned char in;
+
+enum msg_states { read } msg_state = -1;
+
+int msg_Tick(int state) {
+	switch(state) {
+		case read:
+			break;
+		default:
+			state = read;
+			break;
+	}
+	switch(state) {
+		case read:
+			//LCD_ClearScreen();
+			LCD_WriteData(from_key[0]);
+			break;
+	}
+	return state;
+}
+unsigned char A = 0x00;
+
+int main(void)
+{
+	DDRA = 0xFF; PORTA = 0x00;
+	DDRB = 0xFF; PORTB = 0x00; // PORTB set to output, outputs init 0s
+	DDRC = 0xF0; PORTC = 0x0F; // PC7..4 outputs init 0s, PC3..0 inputs init 1s
+	DDRD = 0xFF; PORTD = 0xFF;
+	static task task1, task2;
+	
+	task1.state = keypad_state;
+	task1.period = 300;
+	task1.elapsedTime = 0;
+	task1.TickFct = &keypad_tick;
+	
+	task2.state = msg_state;
+	task2.period = 100;
+	task2.elapsedTime = 0;
+	task2.TickFct = &msg_Tick;
+	
+	LCD_init();
+
+	in = 0;
+	
+	task *tasks[] = { &task1, &task2 };
+	
+	TimerSet(1);
+	TimerOn();
+	LCD_DisplayString(1, "Congratulations");
+	LCD_Cursor(1);
+	
+	unsigned short i;
+	while(1) {
+		A = ~PINA;
+		for ( i = 0; i < 1; i++ ) {
+			// Task is ready to tick
+			if ( tasks[i]->elapsedTime == tasks[i]->period ) {
+				// Setting next state for task
+				tasks[i]->state = tasks[i]->TickFct(tasks[i]->state);
+				// Reset the elapsed time for next tick.
+				tasks[i]->elapsedTime = 0;
+			}
+			tasks[i]->elapsedTime += 1;
+		}
+		while(!TimerFlag);
+		TimerFlag = 0;
+	}
+}
