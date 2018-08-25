@@ -74,12 +74,18 @@ unsigned char GetKeypadKey() {
 char* from_key = " ";
 char msg[] = "Welcome to The Game. Press 1 to start!";
 enum keypad_states {title,menu,game,score,character} keypad_state = 0; 
-
+enum game_states {wait,move} game_state = 0;
+	
 unsigned char x;
 unsigned char selection = 0;
 unsigned char in;
+unsigned char gamebool = 0;
+unsigned char scorebool = 0;
+unsigned char charbool = 0;
+// FOR PLAYER
 unsigned char lastlocation = 0;
 unsigned char currlocation = 0;
+
 unsigned char map = 32;
 unsigned char ind = 0;
 char reading[25];
@@ -110,6 +116,7 @@ int keypad_tick (int state) {
 			break;
 		case game:
 			selection = 0;
+			state = game;
 			break;
 		case score:
 			selection = 0;
@@ -167,7 +174,7 @@ int keypad_tick (int state) {
 			}
 			break;
 		case game:
-			LCD_DisplayString(1,"GAME");
+			gamebool = 1;
 			break;
 		case score:
 			LCD_DisplayString(1,"SCORE");
@@ -185,24 +192,28 @@ int keypad_tick (int state) {
 
 unsigned char in;
 
-enum msg_states { read } msg_state = -1;
-/*
-int msg_Tick(int state) {
-	switch(state) {
-		case read:
-			break;
-		default:
-			state = read;
-			break;
+int gameplay_tick(int state){
+	switch(state){
+		case wait:
+		if(gamebool == 1){
+			game_state = move;
+			} else {
+			game_state = wait;
+		}
+		break;
+		case move:
+		break;
 	}
-	switch(state) {
-		case read:
-			//LCD_ClearScreen();
-			LCD_WriteData(from_key[0]);
-			break;
+	switch(state){
+		case wait:
+		LCD_DisplayString(17,"WHATTTTT");
+		break;
+		case move:
+		LCD_DisplayString(16,"YEAHHHHHH");
+		break;
 	}
 	return state;
-}*/
+}
 
 
 int main(void)
@@ -211,30 +222,30 @@ int main(void)
 	DDRB = 0xFF; PORTB = 0x00; // PORTB set to output, outputs init 0s
 	DDRC = 0xF0; PORTC = 0x0F; // PC7..4 outputs init 0s, PC3..0 inputs init 1s
 	DDRD = 0xFF; PORTD = 0xFF;
-	static task task1, task2;
+	static task task1, gameplay, task2;
 	LCD_build();
 	task1.state = keypad_state;
 	task1.period = 250;
 	task1.elapsedTime = 0;
 	task1.TickFct = &keypad_tick;
-	/*
-	task2.state = msg_state;
-	task2.period = 100;
-	task2.elapsedTime = 0;
-	task2.TickFct = &msg_Tick;
-	*/
+	
+	gameplay.state = game_state;
+	gameplay.period = 250;
+	gameplay.elapsedTime = 0;
+	gameplay.TickFct = &gameplay_tick;
+	
 	LCD_init();
 
 	in = 0;
 	
-	task *tasks[] = { &task1, &task2 };
+	task *tasks[] = { &task1, &gameplay };
 	
 	TimerSet(1);
 	TimerOn();
 	unsigned short i;
 	while(1) {
 		A = ~PINA;
-		for ( i = 0; i < 1; i++ ) {
+		for ( i = 0; i < 2; i++ ) {
 			// Task is ready to tick
 			if ( tasks[i]->elapsedTime == tasks[i]->period ) {
 				// Setting next state for task
