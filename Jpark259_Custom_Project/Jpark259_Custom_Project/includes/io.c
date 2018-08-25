@@ -91,3 +91,8 @@ void delay_ms(int miliSec) //for 8 Mhz crystal
    asm("nop");
   }
 }
+
+void LCD_Cursor_Off()
+{
+	LCD_WriteCommand(0x0C);
+}

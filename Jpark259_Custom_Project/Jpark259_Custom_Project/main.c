@@ -7,6 +7,7 @@
 #include <string.h>
 
 unsigned short numTasks = 2;
+unsigned char A = 0x00;
 
 unsigned long int findGCD(unsigned long int a, unsigned long int b)
 {
@@ -30,19 +31,6 @@ typedef struct _task {
 } task;
 
 
-
-// Returns '\0' if no key pressed, else returns char '1', '2', ... '9', 'A', ...
-// If multiple keys pressed, returns leftmost-topmost one
-// Keypad must be connected to port C
-/* Keypad arrangement
-        PC4 PC5 PC6 PC7
-   col  1   2   3   4
-row
-PC0 1   1 | 2 | 3 | A
-PC1 2   4 | 5 | 6 | B
-PC2 3   7 | 8 | 9 | C
-PC3 4   * | 0 | # | D
-*/
 unsigned char GetKeypadKey() {
 
 	PORTC = 0xEF; // Enable col 4 with 0, disable others with 1’s
@@ -84,53 +72,99 @@ unsigned char GetKeypadKey() {
 }
 
 char* from_key = " ";
-
-enum keypad_states {getkey} keypad_state = -1; 
+char msg[] = "Welcome to The Game. Press 1 to start!";
+enum keypad_states {title,menu,game,score,character} keypad_state = 0; 
 
 unsigned char x;
-
+unsigned char selection = 0;
 unsigned char in;
+unsigned char lastlocation = 0;
+unsigned char currlocation = 0;
+unsigned char map = 32;
+unsigned char ind = 0;
+char reading[25];
 
 int keypad_tick (int state) {
 	switch(state) {
-		case getkey:
+		case title:
+			if(selection == 4){
+				selection = 0;
+				state = menu;
+			} else {
+				state = title;
+			}
+			break;
+		case menu:
+			if(selection == 1){
+				state = game;
+			} else if (selection == 2){
+				state = score;
+			} else if (selection == 3){
+				state = character;
+			} else {
+				state = menu;
+			}
+			break;
+		case game:
+			break;
+		case character:
 			break;
 		default:
-			state = getkey;
+			state = menu;
 			break;
 	}
 	
 	switch(state) {
-		case getkey:
+		case title:
+			x = GetKeypadKey();
+			switch(x){
+				case '/0':
+					break;
+				case '1':
+					x = 0;
+					selection = 4;
+					break;
+				default:
+					strncpy(reading, msg + ind, 16);
+					reading[16] = '\0';
+					LCD_ClearScreen();
+					LCD_DisplayString(1, (const) reading);
+					ind++;
+					ind = ind % 23;
+					
+					break;
+			}
+			
+			break;
+		case menu:
 			x = GetKeypadKey();
 			switch (x) {
-				case '\0': break; // All 5 LEDs on
-				case '1':
-					in++;
+				case '\0': 
+					break; 
+				case 'A':
+					selection = 1;
+					
 					break;
-	/*			case '1': from_key[0] = '1'; break; // hex equivalent
-				case '2': from_key[0] = '2'; break;
-				case '3': from_key[0] = '3'; break;
-				case '4': from_key[0] = '4'; break;
-				case '5': from_key[0] = '5'; break;
-				case '6': from_key[0] = '6'; break;
-				case '7': from_key[0] = '7'; break;
-				case '8': from_key[0] = '8'; break;
-				case '9': from_key[0] = '9'; break;
-				// . . . ***** FINISH *****
-				case 'A': from_key[0] = 'A'; break;
-				case 'B': from_key[0] = 'B'; break;
-				case 'C': from_key[0] = 'C'; break;
-				case 'D': from_key[0] = 'D'; break;
-				case '*': from_key[0] = '*'; break;
-				case '0': from_key[0] = '0'; break;
-				case '#': from_key[0] = '#'; break;*/
+				case 'B':
+					selection = 2;
+					break;
 				default: 
-					LCD_Cursor(in + 1);
-					LCD_WriteData(x); 
-					in = (in + 1) % 16;
-					break; // Should never occur. Middle LED off.
+					LCD_DisplayString(1,"A-Play! B-Score  C-Character");
+					LCD_Cursor_Off();
+					break; 
 			}
+			break;
+		case game:
+			LCD_DisplayString(1,"GAME");
+			break;
+		case score:
+			LCD_DisplayString(1,"SCORE");
+			break;
+		case character:
+			LCD_DisplayString(1,"Character");
+			break;
+		default:
+			state = title;
 			break;
 	}
 	
@@ -140,7 +174,7 @@ int keypad_tick (int state) {
 unsigned char in;
 
 enum msg_states { read } msg_state = -1;
-
+/*
 int msg_Tick(int state) {
 	switch(state) {
 		case read:
@@ -156,8 +190,8 @@ int msg_Tick(int state) {
 			break;
 	}
 	return state;
-}
-unsigned char A = 0x00;
+}*/
+
 
 int main(void)
 {
@@ -166,17 +200,17 @@ int main(void)
 	DDRC = 0xF0; PORTC = 0x0F; // PC7..4 outputs init 0s, PC3..0 inputs init 1s
 	DDRD = 0xFF; PORTD = 0xFF;
 	static task task1, task2;
-	
+	LCD_build();
 	task1.state = keypad_state;
-	task1.period = 300;
+	task1.period = 250;
 	task1.elapsedTime = 0;
 	task1.TickFct = &keypad_tick;
-	
+	/*
 	task2.state = msg_state;
 	task2.period = 100;
 	task2.elapsedTime = 0;
 	task2.TickFct = &msg_Tick;
-	
+	*/
 	LCD_init();
 
 	in = 0;
@@ -185,9 +219,6 @@ int main(void)
 	
 	TimerSet(1);
 	TimerOn();
-	LCD_DisplayString(1, "Congratulations");
-	LCD_Cursor(1);
-	
 	unsigned short i;
 	while(1) {
 		A = ~PINA;
