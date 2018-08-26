@@ -4,6 +4,9 @@
 #include <avr/interrupt.h>
 #include <stdio.h>
 #include "io.c"
+#include "keypad.h"
+#include "menu.h"
+#include "gameplay.h"
 #include <string.h>
 
 unsigned short numTasks = 2;
@@ -31,189 +34,26 @@ typedef struct _task {
 } task;
 
 
-unsigned char GetKeypadKey() {
 
-	PORTC = 0xEF; // Enable col 4 with 0, disable others with 1’s
-	asm("nop"); // add a delay to allow PORTC to stabilize before checking
-	if (GetBit(PINC,0)==0) { return('1'); }
-	if (GetBit(PINC,1)==0) { return('4'); }
-	if (GetBit(PINC,2)==0) { return('7'); }
-	if (GetBit(PINC,3)==0) { return('*'); }
-
-	// Check keys in col 2
-	PORTC = 0xDF; // Enable col 5 with 0, disable others with 1’s
-	asm("nop"); // add a delay to allow PORTC to stabilize before checking
-	if (GetBit(PINC,0)==0) { return('2'); }
-	if (GetBit(PINC,1)==0) { return('5'); }
-	if (GetBit(PINC,2)==0) { return('8'); }
-	if (GetBit(PINC,3)==0) { return('0'); }
-	// ... *****FINISH*****
-
-	// Check keys in col 3
-	PORTC = 0xBF; // Enable col 6 with 0, disable others with 1’s
-	asm("nop"); // add a delay to allow PORTC to stabilize before checking
-	// ... *****FINISH*****
-	if (GetBit(PINC,0)==0) { return('3'); }
-	if (GetBit(PINC,1)==0) { return('6'); }
-	if (GetBit(PINC,2)==0) { return('9'); }
-	if (GetBit(PINC,3)==0) { return('#'); }
-	// Check keys in col 4	
-	PORTC = 0x7F;
-	asm("nop");
-	
-	if (GetBit(PINC,0)==0) { return('A'); }
-	if (GetBit(PINC,1)==0) { return('B'); }
-	if (GetBit(PINC,2)==0) { return('C'); }
-	if (GetBit(PINC,3)==0) { return('D'); }
-	// ... *****FINISH*****
-
-	return('\0'); // default value
-
-}
 
 char* from_key = " ";
-char msg[] = "Welcome to The Game. Press 1 to start!";
-enum keypad_states {title,menu,game,score,character} keypad_state = 0; 
-enum game_states {wait,move} game_state = 0;
+
+
 	
-unsigned char x;
-unsigned char selection = 0;
+
 unsigned char in;
-unsigned char gamebool = 0;
+
 unsigned char scorebool = 0;
 unsigned char charbool = 0;
-// FOR PLAYER
-unsigned char lastlocation = 0;
-unsigned char currlocation = 0;
+
 
 unsigned char map = 32;
-unsigned char ind = 0;
-char reading[25];
 
-int keypad_tick (int state) {
-	switch(state) {
-		case title:
-			if(selection == 4){
-				selection = 0;
-				state = menu;
-			} else {
-				state = title;
-			}
-			break;
-		case menu:
-			if(selection == 1){
-				selection = 0;
-				state = game;
-			} else if (selection == 2){
-				selection = 0;
-				state = score;
-			} else if (selection == 3){
-				selection = 0;
-				state = character;
-			} else {
-				state = menu;
-			}
-			break;
-		case game:
-			selection = 0;
-			state = game;
-			break;
-		case score:
-			selection = 0;
-			break;
-		case character:
-			selection = 0;
-			break;
-		default:
-			state = menu;
-			break;
-	}
-	
-	switch(state) {
-		case title:
-			x = GetKeypadKey();
-			switch(x){
-				case '/0':
-					break;
-				case '1':
-					x = 0;
-					selection = 4;
-					break;
-				default:
-					strncpy(reading, msg + ind, 16);
-					reading[16] = '\0';
-					LCD_ClearScreen();
-					LCD_DisplayString(1, (const) reading);
-					ind++;
-					ind = ind % 23;
-					
-					break;
-			}
-			
-			break;
-		case menu:
-			LCD_DisplayString(1,"A-Play! B-Score  C-Character");
-			LCD_Cursor_Off();
-			x = GetKeypadKey();
-			switch (x) {
-				case '\0': 
-					break; 
-				case 'A':
-					selection = 1;
-					
-					break;
-				case 'B':
-					selection = 2;
-					break;
-				case 'C':
-					selection = 3;
-				default: 
-					LCD_DisplayString(1,"A-Play! B-Score  C-Character");
-					LCD_Cursor_Off();
-					break; 
-			}
-			break;
-		case game:
-			gamebool = 1;
-			break;
-		case score:
-			LCD_DisplayString(1,"SCORE");
-			break;
-		case character:
-			LCD_DisplayString(1,"Character");
-			break;
-		default:
-			state = title;
-			break;
-	}
-	
-	return state;
-}
+
 
 unsigned char in;
 
-int gameplay_tick(int state){
-	switch(state){
-		case wait:
-		if(gamebool == 1){
-			game_state = move;
-			} else {
-			game_state = wait;
-		}
-		break;
-		case move:
-		break;
-	}
-	switch(state){
-		case wait:
-		LCD_DisplayString(17,"WHATTTTT");
-		break;
-		case move:
-		LCD_DisplayString(16,"YEAHHHHHH");
-		break;
-	}
-	return state;
-}
+
 
 
 int main(void)
@@ -222,7 +62,7 @@ int main(void)
 	DDRB = 0xFF; PORTB = 0x00; // PORTB set to output, outputs init 0s
 	DDRC = 0xF0; PORTC = 0x0F; // PC7..4 outputs init 0s, PC3..0 inputs init 1s
 	DDRD = 0xFF; PORTD = 0xFF;
-	static task task1, gameplay, task2;
+	static task task1, gameplay,map, task2;
 	LCD_build();
 	task1.state = keypad_state;
 	task1.period = 250;
@@ -234,18 +74,23 @@ int main(void)
 	gameplay.elapsedTime = 0;
 	gameplay.TickFct = &gameplay_tick;
 	
+	map.state = map_state;
+	map.period = 250;
+	map.elapsedTime = 0;
+	map.TickFct = &map_tick;
+	
 	LCD_init();
 
 	in = 0;
 	
-	task *tasks[] = { &task1, &gameplay };
+	task *tasks[] = { &task1, &gameplay, &map };
 	
 	TimerSet(1);
 	TimerOn();
 	unsigned short i;
 	while(1) {
 		A = ~PINA;
-		for ( i = 0; i < 2; i++ ) {
+		for ( i = 0; i < 3; i++ ) {
 			// Task is ready to tick
 			if ( tasks[i]->elapsedTime == tasks[i]->period ) {
 				// Setting next state for task
