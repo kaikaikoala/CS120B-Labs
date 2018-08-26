@@ -44,7 +44,8 @@ int SM_keypad_tick( int );
 enum SM_LCD_states{ SM_LCD_init };
 int SM_LCD_tick( int );
 
-enum SM_controller_states{ SM_controller_init };
+enum SM_controller_states{ SM_controller_init, SM_controller_wait , SM_controller_press ,
+	SM_controller_press_wait };
 int SM_controller_tick( int );
 
 enum SM_game_engine{ SM_game_engine_init , SM_game_engine_menu , SM_game_engine_play ,
@@ -154,22 +155,37 @@ int SM_keypad_tick(int state){
 	return state ;
 }
 
+//wait, init, press
 int SM_controller_tick(int state){
+	unsigned char cnt = 0;
 	switch(state){
 		case SM_controller_init:
-		break;
+			state=SM_controller_wait;
+			break;
+		case SM_controller_wait:
+			if( keypad_output != '\0'){
+				player_input = keypad_output;
+				state=SM_controller_press;
+			}
+			break;
+		case SM_controller_press:
+			state=SM_controller_press_wait;
+			break;
+		case SM_controller_press_wait:
+			if(keypad_output=='\0'){
+				state=SM_controller_wait;
+			}
+			break;
 		default:
-		state = SM_controller_init;
+			state = SM_controller_init;
+			break;
 	}
 	switch(state){
-		case SM_controller_init:
-		if( keypad_output != '\0'){
-			player_input = keypad_output;
-		}
-		//else{} do nothing
-		break;
+		case SM_controller_press_wait:
+			player_input ='\0';
+			break;
 		default:
-		break;
+			break;
 	}
 	return state;
 }
@@ -214,15 +230,16 @@ int SM_game_engine_tick( int state){
 			break;
 		case SM_game_engine_boot:
 			num_players = 1 ;
+			//bug must have something at cursor 1?
 			myObjects[0].exist = 1;
 			myObjects[0].posX = 1;
 			myObjects[0].posY = 0 ;
 			myObjects[0].shape = 'e';
 			
-			myObjects[0].exist = 1;
-			myObjects[0].posX = 7;
-			myObjects[0].posY = 1 ;
-			myObjects[0].shape = 'f';
+			myObjects[1].exist = 1;
+			myObjects[1].posX = 6;
+			myObjects[1].posY = 1 ;
+			myObjects[1].shape = 'f';
 			break;
 		default:
 			break;
@@ -232,16 +249,17 @@ int SM_game_engine_tick( int state){
 //16
 
 unsigned char update_player( unsigned char myPlayer ){
-	if(player_input == 1){
+	myObjects[0].shape++;
+	if(player_input == '1'){
 		myObjects[myPlayer].posY=0;
 	}
-	else if(player_input == 4){
+	else if(player_input == '4'){
 		myObjects[myPlayer].posY=1;
 	}
-	else if(player_input == 7 ){
+	else if(player_input == '7' && myObjects[myPlayer].posX >1){
 		myObjects[myPlayer].posX-=1;
 	}
-	else if(player_input ==8 ){
+	else if(player_input =='8' && myObjects[myPlayer].posX <16 ){
 		myObjects[myPlayer].posX+=1;
 	}
 	return 0; //1 for player alive 0 for player dead
@@ -252,8 +270,11 @@ void render( struct object* objects , unsigned char size_objects){
 	 
 	for( i = 0 ; i < size_objects ; ++i ){
 		if( objects[i].exist ){
-			//LCD_Cursor( calcPos( objects[i].posX , objects[i].posY ) );
-			LCD_Cursor(5);
+
+			//LCD_Cursor(1);
+			//LCD_WriteData('h');
+			//LCD_Cursor(5);
+			LCD_Cursor( calcPos( objects[i].posX , objects[i].posY ) );
 			LCD_WriteData(objects[i].shape );
 			//LCD_WriteData('r');
 		}
