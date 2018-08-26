@@ -78,3 +78,15 @@ void delay_ms(int miliSec) //for 8 Mhz crystal
    asm("nop");
   }
 }
+
+void LCD_build(){
+	LCD_WriteCommand(0x40);       //Load the location where we want to store
+	LCD_WriteData(0x04);      //Load row 1 data
+	LCD_WriteData(0x0E);      //Load row 2 data
+	LCD_WriteData(0x0E);      //Load row 3 data
+	LCD_WriteData(0x0E);      //Load row 4 data
+	LCD_WriteData(0x1F);      //Load row 5 data
+	LCD_WriteData(0x00);      //Load row 6 data
+	LCD_WriteData(0x04);      //Load row 7 data
+	LCD_WriteData(0x00);      //Load row 8 data
+}
