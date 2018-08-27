@@ -65,7 +65,7 @@ void LCD_Cursor(unsigned char column) {
    } else {
       LCD_WriteCommand(0xB8 + column - 9);	// 16x1 LCD: column - 1
 											// 16x2 LCD: column - 9
-											LCD_WriteCommand(0x0C);
+	LCD_WriteCommand(0x0C);
    }
 }
 
@@ -81,17 +81,7 @@ void delay_ms(int miliSec) //for 8 Mhz crystal
 }
 
 void LCD_build( unsigned char* rows , unsigned char name ){
-	switch(name){
-		case 0:
-			LCD_WriteCommand(0x40);
-			break;       //Load the location where we want to store
-		case 1:
-			LCD_WriteCommand(0x48);
-			break;
-		default:
-			LCD_WriteCommand(0x50);
-			break;
-	}
+	LCD_WriteCommand( 0x40 + (name*8) );
 	LCD_WriteData(rows[0]);      //Load row 1 data
 	LCD_WriteData(rows[1]);      //Load row 2 data
 	LCD_WriteData(rows[2]);      //Load row 3 data

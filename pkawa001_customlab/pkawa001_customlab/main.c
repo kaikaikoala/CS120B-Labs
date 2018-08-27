@@ -2,6 +2,8 @@
 #include "bit.h"
 #include "io.c"
 #include "timer.h"
+#include <time.h>
+#include <stdlib.h>
 
 //Adding SM check list
 // enumerate SM states, create tick function
@@ -29,6 +31,10 @@ void render( struct object* , unsigned char );
 unsigned char calcPos( unsigned char , unsigned char );
 unsigned long int findGCD( unsigned long int, unsigned long int);
 unsigned char update_player( unsigned char );
+unsigned char update_env( ) ;
+void level_one_gen();
+unsigned char collision() ;
+
 
 // Struct for Tasks represent a running process in our simple real-time operating system.
 
@@ -57,8 +63,16 @@ unsigned char keypad_output = 0x00;
 unsigned char LCD_input = 0x00;
 unsigned char player_input = 0x00;
 unsigned char num_players = 0;
+unsigned char env_cnt = 0 ;
+const unsigned char LEVEL = 10;
+const unsigned char MENU_DISPLAY[]
+ ={'A',' ','T','o',' ','p','l','a','y',' ',' ',' ',' ',' ',' ',' ',
+	'B',' ','T','o',' ','m','a','k','e',' ','a','v','a','t','a','r'};
+const unsigned char LOSE_DISPLAY[] = 
+{'y','o','u',' ' ,'l','o','s','e',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
+	' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',};
 
-struct object myObjects[10] ;
+struct object myObjects[32] ;
 unsigned char size_myObjects = sizeof(myObjects)/sizeof(struct object);
 
 int main(void)
@@ -116,6 +130,9 @@ int main(void)
 	LCD_build( &myAvatar , 1 );
 	LCD_init();
 	
+	time_t t;
+	srand( (unsigned) time(&t) );
+	
 	for(i=0 ; i< size_myObjects ; ++i ){
 		myObjects[i].exist = 0 ;
 	}
@@ -158,7 +175,6 @@ int SM_keypad_tick(int state){
 
 //wait, init, press
 int SM_controller_tick(int state){
-	unsigned char cnt = 0;
 	switch(state){
 		case SM_controller_init:
 			state=SM_controller_wait;
@@ -212,36 +228,80 @@ int SM_LCD_tick( int state){
 //init , menu , boot ,play , win , lose }
 int SM_game_engine_tick( int state){
 	//temporary game_engine_tick function
+	int i=0;
 	switch(state){
 		case SM_game_engine_init:
-			state = SM_game_engine_boot;
+			state = SM_game_engine_menu;
+			break;
+		case SM_game_engine_menu:
+			if(player_input == 'A'){
+				state = SM_game_engine_boot;
+			}
 			break;
 		case SM_game_engine_boot:
 			state = SM_game_engine_play;
 			break;
 		case SM_game_engine_play:
+			if( !myObjects[1].exist ){
+				state = SM_game_engine_lose;
+			}
+			break;
+		case SM_game_engine_lose:
+			if( player_input =='A'){
+				state = SM_game_engine_init;
+			}
 			break;
 		default:
 			state = SM_game_engine_init;
 			break;			
 	}
 	switch(state){
+		//myObjects indecies
+		//0 place holder
+		//1-2 players
+		//3-9 food
+		//10-20 environment
+		//20-31??
 		case SM_game_engine_play:
+			if( (env_cnt % 3) == 0 ){
+				update_env();				
+			}
 			update_player( 1 );
+			++env_cnt;
 			break;
 		case SM_game_engine_boot:
+			for(i=0;i<32;++i){
+				myObjects[i].exist = 0;
+			}
 			num_players = 1 ;
 			//bug must have something at cursor 1?
 			myObjects[0].exist = 1;
 			myObjects[0].posX = 1;
 			myObjects[0].posY = 0 ;
-			myObjects[0].shape = 'e';
-			
-			myObjects[1].exist = 1;
-			myObjects[1].posX = 6;
-			myObjects[1].posY = 1 ;
-			//Charater avatar in pos1
-			myObjects[1].shape = num_players;
+			myObjects[0].shape = ' ';
+			//make evn
+			level_one_gen();
+			break;
+		case SM_game_engine_menu:
+			for(i=0;i<32;++i){
+				myObjects[i].exist = 1;
+				myObjects[i].shape = MENU_DISPLAY[i];
+				myObjects[i].posX = i+1; //LCD Screen indexed at 1
+				myObjects[i].posY = 0;
+			}
+			break;
+		case SM_game_engine_init:
+			for(i=0;i<32;++i){
+				
+			}
+			break;
+		case SM_game_engine_lose:
+			for( i = 0 ; i<32 ; ++i ){
+				myObjects[i].exist = 1;
+				myObjects[i].shape = LOSE_DISPLAY[i];
+				myObjects[i].posX = i+1;
+				myObjects[i].posY = 0;
+			}
 			break;
 		default:
 			break;
@@ -251,7 +311,7 @@ int SM_game_engine_tick( int state){
 //16
 
 unsigned char update_player( unsigned char myPlayer ){
-	myObjects[0].shape++;
+	//myObjects[0].shape++;
 	if(player_input == '1'){
 		myObjects[myPlayer].posY=0;
 	}
@@ -264,7 +324,69 @@ unsigned char update_player( unsigned char myPlayer ){
 	else if(player_input =='8' && myObjects[myPlayer].posX <16 ){
 		myObjects[myPlayer].posX+=1;
 	}
+	collision();
 	return 0; //1 for player alive 0 for player dead
+}
+
+unsigned char collision(){
+	for( char i = 10 ; i < 15 ; ++i ){ //thank you friend 
+		if( myObjects[i].exist == 1 ){
+			if( (myObjects[1].posX == myObjects[i].posX) && 
+					(myObjects[1].posY == myObjects[i].posY) ){
+				myObjects[1].exist=0;	
+			}
+		}
+		//else nothing to check if there's collision
+	}
+	return 0;
+}
+
+void level_one_gen(){
+	int i =0;
+	for( i = 10 ; i < 15 ; ++i ){
+		myObjects[i].exist = 1 ;
+		myObjects[i].shape = 'X' ;
+	}
+	myObjects[10].posX = 3;
+	myObjects[10].posY = rand()%2;
+	myObjects[11].posX = 5;
+	myObjects[11].posY = rand()%2;
+	myObjects[12].posX = 8;
+	myObjects[12].posY = rand()%2;
+	myObjects[13].posX = 12;
+	myObjects[13].posY = rand()%2;
+	myObjects[14].posX = 14;
+	myObjects[14].posY = rand()%2;
+				
+	//make first playerr
+	myObjects[1].exist = 1;
+	myObjects[1].posX = 1;
+	myObjects[1].posY = 1 ;
+	//Charater avatar in pos1
+	myObjects[1].shape = num_players;
+}
+
+//10-20 environment //3-9 food
+unsigned char update_env( ){
+	int i=0;
+	for( i = 10 ; i < 15 ; ++i ){
+		if( myObjects[i].exist == 1 ){
+			if( rand() % LEVEL == 0 ){
+				//MOVement function could be random
+				myObjects[i].posX -= 1;
+				if(myObjects[i].posX < 3 ){
+					myObjects[i].exist = 0;
+				}
+			}
+		}
+		else{
+			myObjects[i].exist = 1;
+			myObjects[i].posY = rand() % 2 ;
+			myObjects[i].posX = 14;
+		}
+	}
+	collision();
+	return 0; ////////////////////////////////////NANI
 }
 
 void render( struct object* objects , unsigned char size_objects){
