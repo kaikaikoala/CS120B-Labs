@@ -80,14 +80,24 @@ void delay_ms(int miliSec) //for 8 Mhz crystal
   }
 }
 
-void LCD_build(){
-	LCD_WriteCommand(0x40);       //Load the location where we want to store
-	LCD_WriteData(0x04);      //Load row 1 data
-	LCD_WriteData(0x0E);      //Load row 2 data
-	LCD_WriteData(0x0E);      //Load row 3 data
-	LCD_WriteData(0x0E);      //Load row 4 data
-	LCD_WriteData(0x1F);      //Load row 5 data
-	LCD_WriteData(0x00);      //Load row 6 data
-	LCD_WriteData(0x04);      //Load row 7 data
-	LCD_WriteData(0x00);      //Load row 8 data
+void LCD_build( unsigned char* rows , unsigned char name ){
+	switch(name){
+		case 0:
+			LCD_WriteCommand(0x40);
+			break;       //Load the location where we want to store
+		case 1:
+			LCD_WriteCommand(0x48);
+			break;
+		default:
+			LCD_WriteCommand(0x50);
+			break;
+	}
+	LCD_WriteData(rows[0]);      //Load row 1 data
+	LCD_WriteData(rows[1]);      //Load row 2 data
+	LCD_WriteData(rows[2]);      //Load row 3 data
+	LCD_WriteData(rows[3]);      //Load row 4 data
+	LCD_WriteData(rows[4]);      //Load row 5 data
+	LCD_WriteData(rows[5]);      //Load row 6 data
+	LCD_WriteData(rows[6]);      //Load row 7 data
+	LCD_WriteData(rows[7]);      //Load row 8 data
 }

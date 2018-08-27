@@ -112,7 +112,8 @@ int main(void)
 
 	//Tasks execution while loop
 	unsigned char i = 0 ;
-	LCD_build();
+	unsigned char myAvatar[8] = {0x1b,0x00,0xa,0x0,0x0,0x11,0xe,0x0};
+	LCD_build( &myAvatar , 1 );
 	LCD_init();
 	
 	for(i=0 ; i< size_myObjects ; ++i ){
@@ -239,7 +240,8 @@ int SM_game_engine_tick( int state){
 			myObjects[1].exist = 1;
 			myObjects[1].posX = 6;
 			myObjects[1].posY = 1 ;
-			myObjects[1].shape = 'f';
+			//Charater avatar in pos1
+			myObjects[1].shape = num_players;
 			break;
 		default:
 			break;
