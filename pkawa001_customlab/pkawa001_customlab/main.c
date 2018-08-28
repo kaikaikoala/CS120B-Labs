@@ -66,7 +66,7 @@ enum SM_controller2_states{ SM_controller2_init , SM_controller2_wait , SM_contr
 int SM_controller2_tick(int);
 
 //global variables
-const unsigned char OBSTACLES = 5;
+const unsigned char OBSTACLES =4 ;
 unsigned char keypad_output = 0x00;
 unsigned char LCD_input = 0x00;
 unsigned char player_input = 0x00;
@@ -153,9 +153,13 @@ int main(void)
 	//Tasks execution while loop
 	unsigned char i = 0 ;
 	unsigned char myAvatar[8] = {0x1b,0x00,0xa,0x0,0x0,0x11,0xe,0x0};
-	unsigned char youAvatar[8] = {0x1b,0xa,0x0,0x4,0x0,0xe,0xa,0xe};
+	unsigned char youAvatar[8] = {0x1b,0xa,0x0,0x4,0x0,0x1f,0x11,0xe};
+	unsigned char myFood[8] = {0x1c, 0x14, 0x1c, 0x12, 0x16, 0x2, 0x2, 0x7};
+	unsigned char yourFood[8] ={0x1c, 0x14, 0x1c, 0x10, 0x15, 0x5, 0x5, 0x5};
 	LCD_build( &myAvatar , 1 );
 	LCD_build( &youAvatar , 2 );
+	LCD_build( &myFood , 3 );
+	LCD_build(&yourFood, 4);
 	LCD_init();
 	
 	time_t t;
@@ -437,7 +441,7 @@ unsigned char update_player( unsigned char myPlayer ){
 }
 
 unsigned char collision(){
-	for( char i = 10 ; i < 15 ; ++i ){ //thank you friend 
+	for( char i = 10 ; i < 10 +OBSTACLES ; ++i ){ //thank you friend 
 		if( myObjects[i].exist == 1 ){
 			if( (myObjects[1].posX == myObjects[i].posX) && 
 					(myObjects[1].posY == myObjects[i].posY) ){
@@ -502,7 +506,7 @@ void level_two_gen(){
 	int i =0;
 	
 	//make world
-	for( i = 10 ; i < 15 ; ++i ){
+	for( i = 10 ; i < 10 + OBSTACLES ; ++i ){
 		myObjects[i].exist = 1 ;
 		myObjects[i].shape = 'X' ;
 	}
@@ -514,30 +518,31 @@ void level_two_gen(){
 	myObjects[12].posY = rand()%2;
 	myObjects[13].posX = 12;
 	myObjects[13].posY = rand()%2;
+	/*
 	myObjects[14].posX = 14;
 	myObjects[14].posY = rand()%2;
-	
+	*/
 	//make food
 	myObjects[3].exist = 1;
 	myObjects[3].posX=2;
-	myObjects[3].posY=1;
-	myObjects[3].shape = 'f';
+	myObjects[3].posY=0;
+	myObjects[3].shape = 3;
 	
 	myObjects[4].exist = 1;
 	myObjects[4].posX=2;
 	myObjects[4].posY=1;
-	myObjects[4].shape = 'F';
+	myObjects[4].shape = 4;
 	
 	//make first playerr
 	myObjects[1].exist = 1;
 	myObjects[1].posX = 1;
-	myObjects[1].posY = 1 ;
+	myObjects[1].posY = 0 ;
 	//Charater avatar in pos1
 	myObjects[1].shape = 1;
 	
 	myObjects[2].exist = 1;
-	myObjects[2].posX = 2;
-	myObjects[2].posY = 0;
+	myObjects[2].posX = 1;
+	myObjects[2].posY = 1;
 	myObjects[2].shape = 2;
 }
 
@@ -545,7 +550,7 @@ void level_one_gen(){
 	int i =0;
 	
 	//make world
-	for( i = 10 ; i < 15 ; ++i ){
+	for( i = 10 ; i < 10 + OBSTACLES ; ++i ){
 		myObjects[i].exist = 1 ;
 		myObjects[i].shape = 'X' ;
 	}
@@ -556,15 +561,15 @@ void level_one_gen(){
 	myObjects[12].posX = 8;
 	myObjects[12].posY = rand()%2;
 	myObjects[13].posX = 12;
-	myObjects[13].posY = rand()%2;
+	myObjects[13].posY = rand()%2;/*
 	myObjects[14].posX = 14;
-	myObjects[14].posY = rand()%2;
+	myObjects[14].posY = rand()%2;*/
 	
 	//make food		
 	myObjects[3].exist = 1;
 	myObjects[3].posX=2;
 	myObjects[3].posY=1;
-	myObjects[3].shape = 'f';
+	myObjects[3].shape = 3;
 	
 	//make first playerr
 	myObjects[1].exist = 1;
@@ -579,7 +584,7 @@ unsigned char update_env( ){
 	int i=0;
 	update_score();
 	//make environment
-	for( i = 10 ; i < 15 ; ++i ){
+	for( i = 10 ; i < 10 + OBSTACLES ; ++i ){
 		if( myObjects[i].exist == 1 ){
 			if( rand() % LEVEL == 0 ){
 				//MOVement function could be random
@@ -599,7 +604,7 @@ unsigned char update_env( ){
 	for( i = 3 ; i< 3+num_players ; ++i ){
 		if( myObjects[i].exist == 0 ){
 			myObjects[i].exist = 1 ;
-			myObjects[i].posY = rand() %2 ;
+			myObjects[i].posY = rand()%2 ;
 			if(myObjects[i].posX < 6 ){
 				myObjects[i].posX =  15;
 			}
