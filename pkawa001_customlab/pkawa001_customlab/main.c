@@ -34,6 +34,7 @@ unsigned char update_player( unsigned char );
 unsigned char update_env( ) ;
 void level_one_gen();
 unsigned char collision() ;
+void update_score() ;
 
 
 // Struct for Tasks represent a running process in our simple real-time operating system.
@@ -64,13 +65,15 @@ unsigned char LCD_input = 0x00;
 unsigned char player_input = 0x00;
 unsigned char num_players = 0;
 unsigned char env_cnt = 0 ;
-const unsigned char LEVEL = 10;
+unsigned char score = '0' ;
+const unsigned char LEVEL = 5;
+unsigned char score_str[3] = {'0','0','0'};
 const unsigned char MENU_DISPLAY[]
  ={'A',' ','T','o',' ','p','l','a','y',' ',' ',' ',' ',' ',' ',' ',
 	'B',' ','T','o',' ','m','a','k','e',' ','a','v','a','t','a','r'};
-const unsigned char LOSE_DISPLAY[] = 
-{'y','o','u',' ' ,'l','o','s','e',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
-	' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',};
+unsigned char LOSE_DISPLAY[32] = 
+{'y','o','u',' ' ,'l','o','s','e',' ',' ',' ',' ',' ',' ',' ',' ',
+	'S','o','r','e',':',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '};
 
 struct object myObjects[32] ;
 unsigned char size_myObjects = sizeof(myObjects)/sizeof(struct object);
@@ -268,6 +271,7 @@ int SM_game_engine_tick( int state){
 			}
 			update_player( 1 );
 			++env_cnt;
+			
 			break;
 		case SM_game_engine_boot:
 			for(i=0;i<32;++i){
@@ -291,11 +295,15 @@ int SM_game_engine_tick( int state){
 			}
 			break;
 		case SM_game_engine_init:
-			for(i=0;i<32;++i){
-				
+			for( i = 0 ; i < 3 ; ++i){
+				score_str[i]='0';
 			}
+			score = 0 ;
 			break;
 		case SM_game_engine_lose:
+			LOSE_DISPLAY[29]=score_str[0];
+			LOSE_DISPLAY[30]=score_str[1];
+			LOSE_DISPLAY[31]=score_str[2];
 			for( i = 0 ; i<32 ; ++i ){
 				myObjects[i].exist = 1;
 				myObjects[i].shape = LOSE_DISPLAY[i];
@@ -338,11 +346,22 @@ unsigned char collision(){
 		}
 		//else nothing to check if there's collision
 	}
+	
+	for( char i = 3 ; i < 4 ; ++i ){ //3-9 has food
+		if( myObjects[i].exist == 1 ){
+			if( (myObjects[1].posX == myObjects[i].posX) &&
+			(myObjects[1].posY == myObjects[i].posY) ){
+				myObjects[i].exist=0;
+			}
+		}
+	}
 	return 0;
 }
 
 void level_one_gen(){
 	int i =0;
+	
+	//make world
 	for( i = 10 ; i < 15 ; ++i ){
 		myObjects[i].exist = 1 ;
 		myObjects[i].shape = 'X' ;
@@ -357,7 +376,13 @@ void level_one_gen(){
 	myObjects[13].posY = rand()%2;
 	myObjects[14].posX = 14;
 	myObjects[14].posY = rand()%2;
-				
+	
+	//make food		
+	myObjects[3].exist = 1;
+	myObjects[3].posX=2;
+	myObjects[3].posY=1;
+	myObjects[3].shape = 'f';
+	
 	//make first playerr
 	myObjects[1].exist = 1;
 	myObjects[1].posX = 1;
@@ -369,6 +394,8 @@ void level_one_gen(){
 //10-20 environment //3-9 food
 unsigned char update_env( ){
 	int i=0;
+	update_score();
+	//make environment
 	for( i = 10 ; i < 15 ; ++i ){
 		if( myObjects[i].exist == 1 ){
 			if( rand() % LEVEL == 0 ){
@@ -385,8 +412,40 @@ unsigned char update_env( ){
 			myObjects[i].posX = 14;
 		}
 	}
+	//feed food pls 3-9
+	for( i = 3 ; i< 4 ; ++i ){
+		if( myObjects[i].exist == 0 ){
+			myObjects[i].exist = 1 ;
+			myObjects[i].posY = rand() %2 ;
+			if(myObjects[i].posX < 6 ){
+				myObjects[i].posX =  15;
+			}
+			else{
+				myObjects[i].posX = 1;
+			}
+		}
+	}
 	collision();
 	return 0; ////////////////////////////////////NANI
+}
+
+void update_score(){
+	++score;
+	for(char i = 3 ; i< 4 ; ++i ){
+		if( myObjects[i].exist == 0 ){
+			++score_str[2];
+			if( score_str[2] == '9'){
+				score_str[2] = '0';
+				++score_str[1];
+				if( score_str[1] == '9' ){
+					score_str[1] = '0';
+					++score_str[0];
+				}
+			}
+			
+		}
+	}
+ 
 }
 
 void render( struct object* objects , unsigned char size_objects){
@@ -394,13 +453,8 @@ void render( struct object* objects , unsigned char size_objects){
 	 
 	for( i = 0 ; i < size_objects ; ++i ){
 		if( objects[i].exist ){
-
-			//LCD_Cursor(1);
-			//LCD_WriteData('h');
-			//LCD_Cursor(5);
 			LCD_Cursor( calcPos( objects[i].posX , objects[i].posY ) );
 			LCD_WriteData(objects[i].shape );
-			//LCD_WriteData('r');
 		}
 	}
 }
