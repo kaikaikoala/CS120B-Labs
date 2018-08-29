@@ -4,6 +4,7 @@
 #include "timer.h"
 #include <time.h>
 #include <stdlib.h>
+#include <avr/eeprom.h>
 
 //Adding SM check list
 // enumerate SM states, create tick function
@@ -38,7 +39,11 @@ unsigned char collision() ;
 void update_score() ;
 void boot();
 
+/*
+eeprom_write_byte(0, 8);
 
+eeprom_read_byte(0)
+*/
 // Struct for Tasks represent a running process in our simple real-time operating system.
 
 
@@ -73,7 +78,7 @@ unsigned char player_input = 0x00;
 unsigned char player2_input = 0x00;
 unsigned char num_players = 0;
 unsigned char env_cnt = 0 ;
-unsigned char score = '0' ;
+unsigned char score = 0 ;
 const unsigned char LEVEL = 5;
 unsigned char A =0x00;
 unsigned char score_str[3] = {'0','0','0'};
@@ -82,7 +87,7 @@ const unsigned char MENU_DISPLAY[]
  ={'A',' ','T','o',' ','p','l','a','y',' ',' ',' ',' ',' ',' ',' ',
 	'B',' ','T','o',' ','m','a','k','e',' ','a','v','a','t','a','r'};
 unsigned char LOSE_DISPLAY[32] = 
-{'y','o','u',' ' ,'l','o','s','e',' ',' ',' ',' ',' ',' ',' ',' ',
+{'H','i','g','h',' ','s','c','o','r','e',' ',' ',' ',' ',' ',' ',
 	'S','o','r','e',':',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '};
 	
 const unsigned char BOOT_DISPLAY[] =
@@ -95,6 +100,7 @@ unsigned char size_myObjects = sizeof(myObjects)/sizeof(struct object);
 
 int main(void)
 {
+	//eeprom_write_byte(0, 128);
 	//Ports to be used
 	DDRA = 0x00; PORTA = 0xFF;
 	DDRB = 0xFF; PORTB = 0x00; // PORTB set to output, outputs init 0s
@@ -295,6 +301,8 @@ int SM_LCD_tick( int state){
 int SM_game_engine_tick( int state){
 	//temporary game_engine_tick function
 	int i=0;
+	unsigned char tmpScore = 0 ;
+	unsigned char tmpscorearr[3] = {' ',' ',' '};
 	switch(state){
 		case SM_game_engine_init:
 			state = SM_game_engine_menu;
@@ -335,6 +343,9 @@ int SM_game_engine_tick( int state){
 		case SM_game_engine_lose:
 			if( player_input =='A'){
 				state = SM_game_engine_init;
+					if( score > eeprom_read_byte(0) ){
+						eeprom_write_byte(0 , score );
+					}
 			}
 			else if( A&0x10 ){
 				state = SM_game_engine_init ;
@@ -389,6 +400,12 @@ int SM_game_engine_tick( int state){
 			num_players = 0 ;
 			break;
 		case SM_game_engine_lose:
+			tmpScore = eeprom_read_byte(0);
+			LOSE_DISPLAY[15]= (tmpScore % 10) + '0';
+			LOSE_DISPLAY[14]= ((tmpScore/10) % 10) + '0';
+			
+			LOSE_DISPLAY[13]= (tmpScore/ 100) + '0';
+			
 			LOSE_DISPLAY[29]=score_str[0];
 			LOSE_DISPLAY[30]=score_str[1];
 			LOSE_DISPLAY[31]=score_str[2];
