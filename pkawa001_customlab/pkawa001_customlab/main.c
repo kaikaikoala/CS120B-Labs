@@ -38,6 +38,9 @@ void level_two_gen();
 unsigned char collision() ;
 void update_score() ;
 void boot();
+void avatar_creator();
+unsigned char calcDec(unsigned char*);
+unsigned char* delete_dimension( unsigned char** );
 
 /*
 eeprom_write_byte(0, 8);
@@ -63,7 +66,8 @@ enum SM_controller_states{ SM_controller_init, SM_controller_wait , SM_controlle
 int SM_controller_tick( int );
 
 enum SM_game_engine{ SM_game_engine_init , SM_game_engine_menu , SM_game_engine_play ,
-	 SM_game_engine_win , SM_game_engine_lose, SM_game_engine_boot };
+	 SM_game_engine_win , SM_game_engine_lose, SM_game_engine_boot, SM_game_engine_custom1 ,
+	 SM_game_engine_custom2 };
 int SM_game_engine_tick( int );
 
 enum SM_controller2_states{ SM_controller2_init , SM_controller2_wait , SM_controller2_press ,
@@ -83,6 +87,20 @@ const unsigned char LEVEL = 5;
 unsigned char A =0x00;
 unsigned char score_str[3] = {'0','0','0'};
 unsigned char numPlayers = 0;
+unsigned char custom_row = 0 , custom_column = 0 ;
+unsigned char empty_arr[5]={0,0,0,0 ,0};
+unsigned char input_arr[8][5]={{0,1,0,1 ,0}, {1,0,0,0 ,1},{0,1,0,1 ,0},{0,0,1,0 ,0},
+{0,0,0,0 ,0},{1,1,1,1 ,1},{0,0,0,0 ,0},{0,0,0,0 ,0}};
+unsigned char myAvatar[8] = {0x1b,0x00,10,0x0,0x0,0x11,0xe,0x0};
+unsigned char youAvatar[8] = {0x1b,0xa,0x0,0x4,0x0,0x1f,0x11,0xe};
+unsigned char myFood[8] = {0x1c, 0x14, 0x1c, 0x12, 0x16, 0x2, 0x2, 0x7};
+unsigned char yourFood[8] ={0x1c, 0x14, 0x1c, 0x10, 0x15, 0x5, 0x5, 0x5};
+const unsigned char CUSTOM_DISPLAY1[] =
+{'s','e','l','e','c','t',' ','r','o','w',' ',' ',' ',' ',' ',' ',
+	'e','n','t','e','r',' ','b','i','n','a','r','y',' ',' ',' ',' '};
+unsigned char CUSTOM_DISPLAY2[]=
+{1,' ','R','o','w',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
+	' ',' ','i','n','p','u','t',':',' ',' ',' ',' ',' ',' ',' ',' '};
 const unsigned char MENU_DISPLAY[]
  ={'A',' ','T','o',' ','p','l','a','y',' ',' ',' ',' ',' ',' ',' ',
 	'B',' ','T','o',' ','m','a','k','e',' ','a','v','a','t','a','r'};
@@ -99,8 +117,7 @@ struct object myObjects[32] ;
 unsigned char size_myObjects = sizeof(myObjects)/sizeof(struct object);
 
 int main(void)
-{
-	//eeprom_write_byte(0, 128);
+{		
 	//Ports to be used
 	DDRA = 0x00; PORTA = 0xFF;
 	DDRB = 0xFF; PORTB = 0x00; // PORTB set to output, outputs init 0s
@@ -158,10 +175,7 @@ int main(void)
 
 	//Tasks execution while loop
 	unsigned char i = 0 ;
-	unsigned char myAvatar[8] = {0x1b,0x00,0xa,0x0,0x0,0x11,0xe,0x0};
-	unsigned char youAvatar[8] = {0x1b,0xa,0x0,0x4,0x0,0x1f,0x11,0xe};
-	unsigned char myFood[8] = {0x1c, 0x14, 0x1c, 0x12, 0x16, 0x2, 0x2, 0x7};
-	unsigned char yourFood[8] ={0x1c, 0x14, 0x1c, 0x10, 0x15, 0x5, 0x5, 0x5};
+
 	LCD_build( &myAvatar , 1 );
 	LCD_build( &youAvatar , 2 );
 	LCD_build( &myFood , 3 );
@@ -302,7 +316,7 @@ int SM_game_engine_tick( int state){
 	//temporary game_engine_tick function
 	int i=0;
 	unsigned char tmpScore = 0 ;
-	unsigned char tmpscorearr[3] = {' ',' ',' '};
+	//unsigned char tmpscorearr[3] = {' ',' ',' '};
 	switch(state){
 		case SM_game_engine_init:
 			state = SM_game_engine_menu;
@@ -314,7 +328,10 @@ int SM_game_engine_tick( int state){
 			}
 			else if( A&0x10 ){
 				state = SM_game_engine_init ;
-			}			
+			}	
+			else if( player_input =='B'){
+				state = SM_game_engine_custom1;
+			}		
 			break;
 		case SM_game_engine_boot:
 			if(player_input =='1' || player_input =='2'){
@@ -351,6 +368,22 @@ int SM_game_engine_tick( int state){
 				state = SM_game_engine_init ;
 			}
 			break;
+		case SM_game_engine_custom1:
+			if(player_input=='A'){
+				state=SM_game_engine_custom2;
+			}
+			else if( A&0x10 ){
+				state=SM_game_engine_init;
+			}
+			break;
+		case SM_game_engine_custom2:
+			if( player_input=='A'){
+				state=SM_game_engine_menu;
+			}
+			else if( A&0x10 ){
+				state=SM_game_engine_init;
+			}
+			break;
 		default:
 			state = SM_game_engine_init;
 			break;			
@@ -362,6 +395,21 @@ int SM_game_engine_tick( int state){
 		//3-9 food
 		//10-20 environment
 		//20-31??
+		case SM_game_engine_custom1:
+			for(i=0; i<32;++i){
+				myObjects[i].shape = CUSTOM_DISPLAY1[i] ;
+			}
+			custom_row = 0;
+			custom_column = 0;
+			for(char j=0 ; j<8 ; ++j){
+				for( char k=0 ; k<5 ; ++k){
+					//input_arr[j][k]=0;
+				}		
+			}
+			break;
+		case SM_game_engine_custom2:
+			avatar_creator();
+			break;
 		case SM_game_engine_play:
 			if( num_players == 1 ){
 				if( (env_cnt % 3) == 0 ){
@@ -422,6 +470,57 @@ int SM_game_engine_tick( int state){
 	return state;
 }
 //16
+void avatar_creator(){
+	if( (player_input=='2' || A&0x01)&& custom_row > 0  ){--custom_row;}
+	else if( (player_input == '5' || A&0x04) && custom_row < 7){++custom_row;}
+	else if( (player_input == '4' || A&0x02) && custom_column > 0 ){--custom_column;}
+	else if( (player_input == '6' || A&0x08) && custom_column < 4 ){++custom_column;}
+	else if( player_input == '1' ){ input_arr[custom_row][custom_column]=1;}
+	else if( player_input == '0' ){ input_arr[custom_row][custom_column]=0;}
+	
+	///////////////////////////////////
+	///////////////////////////////////
+		unsigned char arr1d[8]={0,0,0,0 , 0,0,0,0};
+		for( char i = 0 ; i < 8 ; ++i){
+			arr1d[i] = calcDec( input_arr[i] );
+		}
+	
+		///////////////////////////////////delete_dimension(&input_arr)
+		///////////////////////////////////
+	
+	LCD_build( arr1d , 1 );
+	
+	CUSTOM_DISPLAY2[15] = custom_row +'0' ;
+	for( char i = 0 ; i < 5 ; ++i ){
+		CUSTOM_DISPLAY2[27+i]=input_arr[custom_row][i] + '0';
+	}
+	for( char i = 0 ; i<32 ; ++i ){
+		myObjects[i].shape = CUSTOM_DISPLAY2[i] ;
+	}
+	
+}
+
+unsigned char* delete_dimension( unsigned char** arr2d ){
+	unsigned char arr1d[8]={0,0,0,0 , 0,0,0,0};
+	for( char i = 0 ; i < 8 ; ++i){
+		arr1d[i] = calcDec( &arr2d[i] );
+	}
+	return arr1d;
+}
+
+unsigned char calcDec( unsigned char* myArr ){
+	unsigned char sum = 0 ;
+	for( char i = 0 ; i<5 ; ++i ){
+		if( myArr[i] == 1){
+			char tmpSum = 1;
+			for( char j = 0 ; j < 5-(i+1) ; ++j ){
+				tmpSum *= 2;
+			}
+			sum+=tmpSum ;
+		}
+	}
+	return sum ;
+}
 
 unsigned char update_player( unsigned char myPlayer ){
 	//myObjects[0].shape++;
