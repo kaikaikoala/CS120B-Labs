@@ -185,6 +185,9 @@ int main(void)
 	time_t t;
 	srand( (unsigned) time(&t) );
 	
+	if( eeprom_read_byte(0) == 255 ){
+		eeprom_write_byte(0,0);
+	}
 	for(i=0 ; i< size_myObjects ; ++i ){
 		myObjects[i].exist = 0 ;
 	}
